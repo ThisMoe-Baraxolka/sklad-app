@@ -6,4 +6,219 @@ const categories=["Медовуха Mjolnir","Сидр","Пиво Б/А","Пив
 const starter=[["Медовуха Mjolnir","Кровь Йотуна"],["Медовуха Mjolnir","Чёрный Вепрь"],["Медовуха Mjolnir","Хель Владычица"],["Медовуха Mjolnir","Поцелуй Фреи"],["Сидр","Дальняя дача №1"],["Сидр","Дальняя дача №2"],["Сидр","Дальняя дача №3"],["Сидр","Chester’s Яблоко сладкое"],["Сидр","Chester’s Вишня"],["Сидр","Chester’s Яблоко сухое"],["Сидр","Chester’s Груша"],["Пиво Б/А","Clausthaler"],["Пиво Б/А","Stracovice"],["Пиво","Наглецы из Воронежа Pils"],["Пиво","Наглецы из Воронежа Weissbier"],["Пиво","Наглецы из Воронежа Dark Lager"],["Пиво","Наглецы из Воронежа Blanche"],["Пиво","Corona Extra"],["Пиво","Guinness Draught"],["Пиво","Liebenweiss"],["Пиво","Paulaner Hefe Weissbier"],["Пиво","Paulaner Munchner Hell"],["Пиво","Tarkos White Rabbit"],["Пиво","Tarkos Mad Hatter"],["Пиво","Tarkos Dva Bobra Lezak"],["Пиво","Tarkos Dva Bobra Weissbier"],["Пиво","Tarkos Ceska Koruna"],["Лимонад Волчек","Груша личи"],["Лимонад Волчек","Цитрус микс"],["Лимонад Волчек","Грейпфрут гибискус"],["Лимонад Волчек","Манго кокос"],["Лимонад Волчек","Арбуз"],["Берн","Тропик"],["Берн","Яблоко киви"],["Берн","Оригинал"],["Берн","Сочная"],["Берн","Персик манго"],["Сок Sandal","Сок Sandal"],["Газировка импорт","Газировка импорт"]];
 const KEY="sklad-app-v1";let products=load(),editId=null;function load(){try{let s=localStorage.getItem(KEY);if(s){let p=JSON.parse(s);if(Array.isArray(p))return p}}catch(e){}return starter.map((p,i)=>({id:i+1,name:p[1],category:p[0],qty:0,min:7}))}function save(){localStorage.setItem(KEY,JSON.stringify(products));render()}function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}function toast(s){let e=document.getElementById("toast");e.textContent=s;e.style.display="block";clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>e.style.display="none",1800)}function fillCategories(){categoryFilter.innerHTML='<option value="">Все категории</option>'+categories.map(c=>'<option>'+esc(c)+'</option>').join("");categoryInput.innerHTML=categories.map(c=>'<option>'+esc(c)+'</option>').join("")}function render(){let q=document.getElementById("search").value.trim().toLocaleLowerCase("ru"),cat=document.getElementById("categoryFilter").value,shown=products.filter(p=>(!cat||p.category===cat)&&(!q||(p.name+" "+p.category).toLocaleLowerCase("ru").includes(q))).sort((a,b)=>categories.indexOf(a.category)-categories.indexOf(b.category)||a.name.localeCompare(b.name,"ru"));document.getElementById("totalKinds").textContent=products.length;document.getElementById("totalUnits").textContent=products.reduce((n,p)=>n+(Number(p.qty)||0),0);document.getElementById("lowCount").textContent=products.filter(p=>Number(p.qty)<Number(p.min)).length;document.getElementById("visibleCount").textContent=shown.length+" поз.";document.getElementById("listTitle").textContent=cat||"Все товары";let list=document.getElementById("productList");if(!shown.length){list.innerHTML='<div class="empty">Ничего не найдено.<br>Попробуй изменить поиск или фильтр.</div>';return}let last="";list.innerHTML=shown.map(p=>{let section=p.category!==last?'<div class="sectionhead"><h2>'+esc(p.category)+'</h2></div>':"";last=p.category;let low=Number(p.qty)<Number(p.min);return section+'<article class="product '+(low?'low':'')+'"><div><div class="pname">'+esc(p.name)+'</div><div class="pcat">'+esc(p.category)+'</div><div class="stockline"><span class="stocknum">Мин. '+p.min+' шт.</span>'+(low?'<span class="lowtag">МАЛО</span>':"")+'</div></div><div class="controls"><button class="step" data-action="minus" data-id="'+p.id+'">−</button><span class="qty '+(low?'lowqty':'')+'">'+p.qty+'</span><button class="step plus" data-action="plus" data-id="'+p.id+'">＋</button><button class="mini" data-action="edit" data-id="'+p.id+'">⋯</button></div></article>'}).join("")}function openModal(id=null){editId=id;let p=id?products.find(x=>x.id===id):null;document.getElementById("modalTitle").textContent=p?"Редактировать товар":"Новый товар";document.getElementById("nameInput").value=p?p.name:"";document.getElementById("categoryInput").value=p?p.category:categories[0];document.getElementById("qtyInput").value=p?p.qty:0;document.getElementById("minInput").value=p?p.min:7;document.getElementById("deleteBtn").style.display=p?"block":"none";document.getElementById("overlay").classList.add("open")}function closeModal(){document.getElementById("overlay").classList.remove("open");editId=null}
 document.getElementById("productList").addEventListener("click",e=>{let b=e.target.closest("button[data-action]");if(!b)return;let p=products.find(x=>x.id===Number(b.dataset.id));if(!p)return;if(b.dataset.action==="minus"){p.qty=Math.max(0,Number(p.qty)-1);save()}else if(b.dataset.action==="plus"){p.qty=Number(p.qty)+1;save()}else openModal(p.id)});document.getElementById("addBtn").addEventListener("click",()=>openModal());document.getElementById("cancelBtn").addEventListener("click",closeModal);document.getElementById("overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeModal()});document.getElementById("search").addEventListener("input",render);document.getElementById("categoryFilter").addEventListener("change",render);document.getElementById("clearSearch").addEventListener("click",()=>{document.getElementById("search").value="";render()});document.getElementById("productForm").addEventListener("submit",e=>{e.preventDefault();let name=document.getElementById("nameInput").value.trim(),category=document.getElementById("categoryInput").value,qty=Math.max(0,Number(document.getElementById("qtyInput").value)||0),min=Math.max(0,Number(document.getElementById("minInput").value)||0);if(!name)return;if(editId)Object.assign(products.find(x=>x.id===editId),{name,category,qty,min});else products.push({id:Date.now(),name,category,qty,min});closeModal();save();toast("Сохранено")});document.getElementById("deleteBtn").addEventListener("click",()=>{if(!editId)return;let p=products.find(x=>x.id===editId);if(confirm('Удалить «'+p.name+'»?')){products=products.filter(x=>x.id!==editId);closeModal();save();toast("Товар удалён")}});function exportCSV(){let rows=[["Название","Категория","Остаток","Минимум"],...products.map(p=>[p.name,p.category,p.qty,p.min])],csv="\uFEFF"+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\r\n"),blob=new Blob([csv],{type:"text/csv;charset=utf-8;"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="ostatki-sklada.csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);toast("Экспорт готов")}document.getElementById("exportBtn").addEventListener("click",exportCSV);document.getElementById("exportCsv").addEventListener("click",exportCSV);fillCategories();render();
+</script><script>
+/* Связь старого приложения с Firebase */
+window.__skladBridge = {
+  getProducts: () => products,
+  setProducts: (data) => {
+    products = data;
+    localStorage.setItem(KEY, JSON.stringify(products));
+    render();
+  }
+};
+
+const originalSave = save;
+
+save = function () {
+  originalSave();
+  if (window.__skladCloudSave) {
+    window.__skladCloudSave(products);
+  }
+};
+
+/* Окно входа */
+document.body.insertAdjacentHTML("beforeend", `
+<style>
+#cloudLogin {
+  position:fixed; inset:0; z-index:1000;
+  background:#090b10; display:flex;
+  align-items:center; justify-content:center;
+  padding:24px; font-family:inherit;
+}
+#cloudLogin .loginbox {
+  width:100%; max-width:400px;
+  background:#131720; border:1px solid #292f3b;
+  border-radius:22px; padding:24px;
+}
+#cloudLogin h2 { margin:0 0 8px; font-size:25px; }
+#cloudLogin p { color:#9ba4b3; font-size:14px; line-height:1.5; }
+#cloudLogin input {
+  display:block; width:100%; margin:12px 0;
+  padding:14px; border-radius:12px;
+  border:1px solid #292f3b; background:#090b10;
+  color:#fff; font:inherit; box-sizing:border-box;
+}
+#cloudLogin button {
+  width:100%; padding:14px; border:0;
+  border-radius:12px; background:#b8e986;
+  color:#14200d; font:inherit; font-weight:800;
+}
+#cloudLogin button:disabled { opacity:.6; }
+#cloudMessage { overflow-wrap:anywhere; }
+</style>
+<div id="cloudLogin">
+  <div class="loginbox">
+    <div style="color:#b8e986;font-weight:800;font-size:12px">
+      ОБЛАЧНЫЙ СКЛАД
+    </div>
+    <h2>Вход в систему</h2>
+    <p>Войди по почте и паролю, чтобы открыть склад и синхронизировать остатки между устройствами.</p>
+    <form id="cloudForm">
+      <input id="cloudEmail" type="email" placeholder="Электронная почта" autocomplete="username" required>
+      <input id="cloudPassword" type="password" placeholder="Пароль" autocomplete="current-password" required>
+      <button id="cloudSubmit" type="submit">Войти в склад</button>
+    </form>
+    <p id="cloudMessage" role="status">Подключение к облаку…</p>
+  </div>
+</div>
+`);
+
+</script>
+
+<script type="module">
+import { initializeApp }
+  from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+
+import {
+  getDatabase, ref, runTransaction, onValue, set
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBaQfmiD4uaJ9jmRhnFC72WcKmE7GkwA",
+  authDomain: "sklad-agava.firebaseapp.com",
+  databaseURL: "https://sklad-agava-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "sklad-agava",
+  storageBucket: "sklad-agava.firebasestorage.app",
+  messagingSenderId: "771806088401",
+  appId: "1:771806088401:web:a08bbb2074df5f6501c9f0",
+  measurementId: "G-R5CBVVD7VM"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const productsRef = ref(db, "inventory/products");
+
+const login = document.getElementById("cloudLogin");
+const form = document.getElementById("cloudForm");
+const message = document.getElementById("cloudMessage");
+const submit = document.getElementById("cloudSubmit");
+
+let ready = false;
+let applyingCloud = false;
+let writeQueue = Promise.resolve();
+
+function showMessage(text) {
+  message.textContent = text;
+}
+
+function normalizeProducts(data) {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    return Object.values(data);
+  }
+  return [];
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  submit.disabled = true;
+  showMessage("Выполняем вход…");
+
+  try {
+    await signInWithEmailAndPassword(
+      auth,
+      document.getElementById("cloudEmail").value.trim(),
+      document.getElementById("cloudPassword").value
+    );
+    showMessage("Вход выполнен. Загружаем склад…");
+  } catch (error) {
+    showMessage(
+      error.code === "auth/invalid-credential"
+        ? "Неверная почта или пароль."
+        : "Не удалось войти: " + error.message
+    );
+    submit.disabled = false;
+  }
+});
+
+onAuthStateChanged(auth, async (user) => {
+  ready = false;
+
+  if (!user) {
+    login.style.display = "flex";
+    submit.disabled = false;
+    showMessage("Войди с помощью своего аккаунта.");
+    return;
+  }
+
+  login.style.display = "flex";
+  submit.disabled = true;
+  showMessage("Подключаем облачный склад…");
+
+  try {
+    /*
+      Если облако пустое — создаём каталог из текущего приложения.
+      Если данные уже есть — сохраняем облачные данные.
+    */
+    const localProducts = window.__skladBridge.getProducts();
+
+    const result = await runTransaction(productsRef, (current) => {
+      return current === null ? localProducts : current;
+    });
+
+    if (!result.committed) {
+      throw new Error("Не удалось инициализировать склад.");
+    }
+
+    const initialData = normalizeProducts(result.snapshot.val());
+
+    applyingCloud = true;
+    window.__skladBridge.setProducts(initialData);
+    applyingCloud = false;
+
+    onValue(productsRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+
+      const cloudProducts = normalizeProducts(snapshot.val());
+
+      applyingCloud = true;
+      window.__skladBridge.setProducts(cloudProducts);
+      applyingCloud = false;
+
+      ready = true;
+      login.style.display = "none";
+    }, (error) => {
+      showMessage("Ошибка чтения облака: " + error.message);
+    });
+
+    ready = true;
+    login.style.display = "none";
+    if (typeof toast === "function") toast("Облако подключено");
+  } catch (error) {
+    applyingCloud = false;
+    showMessage("Ошибка подключения: " + error.message);
+    submit.disabled = false;
+  }
+});
+
+/* Отправка изменений в Firebase */
+window.__skladCloudSave = (products) => {
+  if (!ready  || applyingCloud ||  !auth.currentUser) return;
+
+  const data = JSON.parse(JSON.stringify(products));
+
+  writeQueue = writeQueue
+    .then(() => set(productsRef, data))
+    .catch((error) => {
+      console.error("Ошибка синхронизации:", error);
+      if (typeof toast === "function") {
+        toast("Ошибка облака — проверь соединение");
+      }
+    });
+};
 </script></body></html>
